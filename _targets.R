@@ -15,7 +15,7 @@ list(
   tar_target(
     book_urls,
     {
-      offsets <- seq(0, 234, by = 26) 
+      offsets <- seq(0, 1300, by = 26)
       paste0("https://bookmanager.com/browse/filter/o/", offsets, "/l/26")
     }
   ),
