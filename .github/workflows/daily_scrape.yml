@@ -22,7 +22,14 @@ jobs:
       - name: Install System Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libcurl4-openssl-dev google-chrome-stable
+          # These are the missing pieces from your error log:
+          sudo apt-get install -y \
+            libcurl4-openssl-dev \
+            libglpk-dev \
+            libx11-dev \
+            libxt-dev \
+            pandoc \
+            google-chrome-stable
 
       - name: Restore renv package cache
         uses: r-lib/actions/setup-renv@v2
