@@ -5,10 +5,15 @@ library(purrr)
 library(stringr)
 
 scrape_bookmanager <- function(url = "https://bookmanager.com/browse") {
-  # 1. Start a headless browser session
-  b <- ChromoteSession$new()
+  # Bump timeout for slow virtual environments
+  options(chromote.timeout = 30)
+  
+  # Force headless chrome to play nice with GitHub Actions Linux environment
+  chnl <- Chrome$new(args = c("--headless", "--disable-gpu", "--no-sandbox", "--disable-dev-shm-usage"))
+  b <- ChromoteSession$new(browser = chnl)
+  
   b$Page$navigate(url)
-  Sys.sleep(2.5) 
+  Sys.sleep(2.5)
   
   doc <- b$Runtime$evaluate("document.documentElement.outerHTML")$result$value %>%
     read_html()
