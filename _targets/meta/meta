@@ -1,6 +1,0 @@
-name|type|data|command|depend|seed|path|time|size|bytes|format|repository|iteration|parent|children|seconds|warnings|error
-get_book_data|function|1a0959907a67b4ad
-book_urls|stem|f31f5dbe3a2b2573|a12f8ce4c61810b6|2c530c1562a7fbd1|-903717385||t20587.74905808s|s149b|149|rds|local|vector|||0.02||
-scrape_bookmanager|function|09531e7e5fdeff2f
-raw_data|stem|d076aae53c0a3915|52ffab85816d8b32|568e8ec3b061ebfc|-1101284392||t20587.7583358925s|s14051b|14051|rds|local|vector|||31.5||
-save_snapshot|stem|97b157e5dd794d68|1211715373954c89|9f49ce7067fa533f|1948970730|data/book_data_master.csv|t20587.7583381745s|s36834b|36834|file|local|vector|||0.13||
