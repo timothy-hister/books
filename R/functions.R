@@ -5,12 +5,16 @@ library(purrr)
 library(stringr)
 
 scrape_bookmanager <- function(url = "https://bookmanager.com/browse") {
-  # Bump timeout for slow virtual environments
+  # 1. Set the timeout option globally for chromote
   options(chromote.timeout = 30)
   
-  # Force headless chrome to play nice with GitHub Actions Linux environment
-  chnl <- Chrome$new(args = c("--headless", "--disable-gpu", "--no-sandbox", "--disable-dev-shm-usage"))
-  b <- ChromoteSession$new(browser = chnl)
+  # 2. Set the command-line arguments via an environment variable BEFORE chromote starts
+  Sys.setenv(
+    CHROMOTE_CHROME_ARGS = "--headless --disable-gpu --no-sandbox --disable-dev-shm-usage"
+  )
+  
+  # 3. Start the session normally (it automatically picks up the env var above)
+  b <- ChromoteSession$new()
   
   b$Page$navigate(url)
   Sys.sleep(2.5)
