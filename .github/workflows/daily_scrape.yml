@@ -4,6 +4,9 @@ on:
   schedule:
     - cron: '0 10 * * *' # Runs at 10:00 UTC (Early morning Western Canada)
   workflow_dispatch: # Allows you to run it manually from GitHub
+  
+permissions:
+  contents: write
 
 jobs:
   scrape:
