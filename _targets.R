@@ -1,4 +1,3 @@
-# Inside _targets.R
 library(targets)
 library(dplyr)
 library(readr)
