@@ -1,0 +1,5 @@
+name|type|data|command|depend|seed|path|time|size|bytes|format|repository|iteration|parent|children|seconds|warnings|error
+book_urls|stem|1051b70b629b18f2|cb686dd35615abfe|2c530c1562a7fbd1|-903717385||t20591.1145301542s|s199b|199|rds|local|vector|||0.01||
+raw_data|stem|a3c759c6d16f8818|6286e4a1d1219fb2|e0b70b7598f24eb3|-1101284392||t20591.1159011216s|s22043b|22043|rds|local|vector|||118.32||
+scrape_bookmanager|function|f24b8ef6e794fad6
+save_snapshot|stem|73bc990c722765d4|4c9cc58a9d6540ec|45672c823a9b3c9b|1948970730|data/book_data_master.csv|t20591.1180183465s|s235856b|235856|file|local|vector|||1.69||

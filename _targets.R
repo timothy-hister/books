@@ -44,7 +44,7 @@ list(
         old_data <- read_csv(file_path)
         # Combine and keep only unique day/isbn combos
         final_data <- bind_rows(old_data, raw_data) %>%
-          distinct(date_pulled, uid, .keep_all = TRUE)
+          distinct()
       } else {
         final_data <- raw_data
       }
