@@ -7,10 +7,10 @@ library(readr)
 source("global.R")
 
 # Check if the app is currently running on shinyapps.io
-is_deployed <- !nzchar(Sys.getenv("SHINYAPPS_APP_NAME"))
+is_deployed <- nzchar(Sys.getenv("SHINYAPPS_APP_NAME"))
 
 # Set a secure app password
-APP_PASSWORD <- "indiebooks2026"
+APP_PASSWORD <- "followingfromahead2026"
 
 # 1. MAIN UI
 main_ui <- page_navbar(

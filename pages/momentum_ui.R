@@ -21,7 +21,7 @@ page_momentum_ui <- function(id) {
       ),
       
       # Filter flags
-      checkboxInput(ns("canadian_only"), "🇨🇦 Canadian Authors Only", value = FALSE),
+      checkboxInput(ns("canadian_only"), "Canadian Authors Only", value = FALSE),
       checkboxInput(ns("juvenile_only"), "👶 Children / Juvenile Only", value = FALSE)
     ),
     
