@@ -52,3 +52,15 @@ po/*~
 
 # RStudio Connect folder
 rsconnect/
+
+# Ignore local dashboard target logs and test cache files
+
+_targets/
+_targets_r/
+.RData
+.Rhistory
+
+#IGNORE local serialized debug reactives
+#This keeps the temporary test objects from bloating your GitHub repo
+
+dev/dev_reactives/
