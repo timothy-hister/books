@@ -26,6 +26,19 @@ page_momentum_server <- function(input, output, session, ...) {
         filter(str_detect(tolower(genre), "juvenile|children|ya|young adult"))
     }
     
+    filtered_data <- filtered_data %>% 
+    group_by(date_pulled) %>%
+      mutate(scraped_rank = row_number()) %>%
+      ungroup() %>%
+      mutate(
+        safe_isbn = ifelse(is.na(isbn), "noisbn", isbn),
+        uid = paste(safe_isbn, title, author, sep = "_") %>% 
+          str_to_lower() %>% 
+          str_replace_all("[^a-z0-9]", "_") %>%
+          str_trunc(80, ellipsis = "")
+      ) %>%
+      select(-safe_isbn)
+    
     # 2. CALCULATE VELOCITY: Run the regression on the filtered set
     # We use scraped_rank (pre-calculated globally) as the y-axis
     # days_from_start as the x-axis
@@ -41,10 +54,12 @@ page_momentum_server <- function(input, output, session, ...) {
         # Current rank is the rank on the target_date
         current_rank = last(scraped_rank[date_pulled == input$target_date]),
         # Multiply slope by -1 because lower rank number = better position
-        velocity = -lm(scraped_rank ~ days_from_start)$coefficients["days_from_start"],
+        velocity = round(-lm(scraped_rank ~ days_from_start)$coefficients["days_from_start"], 1),
         .groups = "drop"
       ) %>%
       filter(!is.na(current_rank)) %>%
+      # OPTION A FILTER: Applied to final target positions
+      filter(current_rank >= input$rank_bracket[1] & current_rank <= input$rank_bracket[2]) %>%
       mutate(is_new_entry = FALSE) # New entries with only 1 day were filtered out by n() >= 2
     
     # 3. DEBUG EXPORT
@@ -60,41 +75,44 @@ page_momentum_server <- function(input, output, session, ...) {
     df <- momentum_data()
     req(nrow(df) > 0)
     
-    # Highlight the Top 5 Momentum Risers (Hidden Gems!)
-    top_gems <- df %>%
-      filter(!is_new_entry) %>%
-      arrange(desc(rank_delta)) %>%
+    # 1. Use uid instead of title to prevent name collision bugs
+    top_accelerators <- df %>%
+      arrange(desc(velocity)) %>%
       slice_head(n = 5) %>%
-      pull(title)
+      pull(uid)
     
+    # 2. Swap old snapshot variables for the new velocity metrics
     plot_df <- df %>%
       mutate(
-        highlight = ifelse(title %in% top_gems, "Top Riser 💍", "Standard"),
+        highlight = ifelse(uid %in% top_accelerators & velocity > 0, "Top Riser 💍", "Standard"),
         tooltip_text = paste0(
           "<b>", title, "</b><br/>",
           "Author: ", author, "<br/>",
-          "Current Rank: #", comparison_rank, "<br/>",
-          "Rank Shift: ", ifelse(is_new_entry, "New Entry! ✨", paste0("+", rank_delta, " spots"))
+          "Current Rank: #", current_rank, "<br/>",
+          "Velocity Index: ", ifelse(velocity > 0, paste0("+", velocity), velocity), " ranks/day"
         )
       )
     
-    gg <- ggplot(plot_df, aes(x = comparison_rank, y = rank_delta)) +
+    # 3. Map X to current_rank and Y to the linear regression slope (velocity)
+    gg <- ggplot(plot_df, aes(x = current_rank, y = velocity)) +
       geom_point_interactive(
         aes(
           tooltip = tooltip_text,
-          data_id = title,
+          data_id = uid, # Keep tracking stable with the clean UID string
           color = highlight,
           size = highlight
         ),
         alpha = 0.85
       ) +
-      scale_x_reverse(limits = c(max(plot_df$comparison_rank), 1)) + # Put #1 bestseller on the right
+      # Adds a baseline at 0 to separate the risers from the fallers
+      geom_hline(yintercept = 0, linetype = "dashed", color = "#bdc3c7") + 
+      scale_x_reverse(limits = c(max(plot_df$current_rank), 1)) + # Bestseller #1 on the far right
       scale_color_manual(values = c("Standard" = "#808f9d", "Top Riser 💍" = "#d95f02")) +
       scale_size_manual(values = c("Standard" = 2.5, "Top Riser 💍" = 5)) +
       labs(
-        title = "Rank Position vs Rank Momentum",
-        x = "Comparison Date Rank (Position #1 is on the far right)",
-        y = "Momentum (Spots climbed since baseline)"
+        title = "Current Position vs Steady Trend Velocity",
+        x = "Target Date Rank (Position #1 is on the far right)",
+        y = "Velocity (Average ranks climbed per day)"
       ) +
       theme_minimal(base_family = "sans") +
       theme(
@@ -113,7 +131,7 @@ page_momentum_server <- function(input, output, session, ...) {
         opts_toolbar(saveaspng = FALSE)
       )
     )
-  })
+  })  
   
   # RENDER HIGH-END SORTABLE LEDGER (reactable)
   output$ledger_table <- renderReactable({
@@ -121,17 +139,18 @@ page_momentum_server <- function(input, output, session, ...) {
     req(nrow(df) > 0)
     
     table_df <- df %>%
-      select(comparison_rank, baseline_rank, rank_delta, title, author, genre, is_canadian) %>%
+      # 1. Select the new engine parameters
+      select(current_rank, velocity, title, author, genre, is_canadian) %>%
       mutate(
+        # 2. Swap out the flag for the maple leaf and check for a velocity slope > 2
         status = case_when(
-          is_canadian & rank_delta > 15 ~ "🇨🇦 🔥",
-          is_canadian ~ "🇨🇦",
-          rank_delta > 15 ~ "🔥",
-          baseline_rank == 999 ~ "✨",
+          is_canadian & velocity > 2 ~ "🍁 🔥",
+          is_canadian ~ "🍁",
+          velocity > 2 ~ "🔥",
           TRUE ~ ""
         )
       ) %>%
-      arrange(comparison_rank)
+      arrange(desc(velocity))
     
     reactable(
       table_df,
@@ -139,17 +158,22 @@ page_momentum_server <- function(input, output, session, ...) {
       striped = TRUE,
       highlight = TRUE,
       defaultPageSize = 10,
+      defaultSorted = list(velocity = "desc"),
       columns = list(
-        comparison_rank = colDef(name = "Current Rank", width = 110, align = "center"),
-        baseline_rank = colDef(name = "Prior Rank", width = 110, align = "center", cell = function(value) {
-          if (value == 999) "—" else value
-        }),
-        rank_delta = colDef(name = "Delta", width = 100, align = "center", cell = function(value) {
-          if (value > 0) paste0("+", value) else value
-        }, style = function(value) {
-          color <- if (value > 0) "#27ae60" else if (value < 0) "#c0392b" else "#7f8c8d"
-          list(color = color, fontWeight = "bold")
-        }),
+        # 3. Re-align the columns to display the rate-of-change trend line
+        current_rank = colDef(name = "Current Rank", width = 110, align = "center"),
+        velocity = colDef(
+          name = "Velocity (Ranks/Day)", 
+          width = 160, 
+          align = "center", 
+          cell = function(value) {
+            if (value > 0) paste0("+", value) else value
+          }, 
+          style = function(value) {
+            color <- if (value > 0) "#27ae60" else if (value < 0) "#c0392b" else "#7f8c8d"
+            list(color = color, fontWeight = "bold")
+          }
+        ),
         title = colDef(name = "Book Title", minWidth = 200),
         author = colDef(name = "Author", minWidth = 150),
         genre = colDef(name = "Genre", minWidth = 120),

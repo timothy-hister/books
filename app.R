@@ -18,18 +18,7 @@ is_deployed <- nzchar(Sys.getenv("SHINYAPPS_APP_NAME"))
 APP_PASSWORD <- Sys.getenv("APP_PASSWORD")
 DATA_PATH <- Sys.getenv("DATA_PATH")
 
-master_data = read_csv(DATA_PATH) |>
-  group_by(date_pulled) %>%
-  mutate(scraped_rank = row_number()) %>%
-  ungroup() %>%
-  mutate(
-    safe_isbn = ifelse(is.na(isbn), "noisbn", isbn),
-    uid = paste(safe_isbn, title, author, sep = "_") %>% 
-      str_to_lower() %>% 
-      str_replace_all("[^a-z0-9]", "_") %>%
-      str_trunc(80, ellipsis = "")
-  ) %>%
-  select(-safe_isbn)
+master_data = read_csv(DATA_PATH, show_col_types = FALSE)
 
 # 1. MAIN UI
 main_ui <- page_navbar(

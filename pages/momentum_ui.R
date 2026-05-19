@@ -19,6 +19,14 @@ page_momentum_ui <- function(id, ...) {
       title = "Filters",
       dateInput(ns("target_date"), "Target Date:", value = target_val),
       sliderInput(ns("lookback_days"), "Days to Look Back:", min = 1, max = max_slider, value = default_days, step = 1),
+      sliderInput(
+        ns("rank_bracket"), 
+        "Rank Bracket:", 
+        min = 1, 
+        max = 200,      # Or max(available_ranks) dynamically
+        value = c(50, 200), 
+        step = 5
+      ),
       
       hr(),
       
