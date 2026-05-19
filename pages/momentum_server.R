@@ -1,79 +1,59 @@
 page_momentum_server <- function(input, output, session, ...) {
   ns <- session$ns
-  
-  # Unpack the arbitrary arguments passed into the ellipsis
   args <- list(...)
-  
-  # Pull our master_data reactive out of the argument bundle
   master_data <- args$master_data
   
-  # Dynamically populate genres dropdown on setup
-  observe({
-    data <- master_data
-    req(nrow(data) > 0)
-    
-    unique_genres <- data %>% 
-      filter(!is.na(genre)) %>% 
-      pull(genre) %>% 
-      unique() %>% 
-      sort()
-    
-    updateSelectizeInput(
-      session, 
-      "genre_filter", 
-      choices = unique_genres, 
-      server = TRUE
-    )
-  })
-  
-  # CORE TRANSFORMATION: Align baseline vs comparison, calculate deltas on the fly
+  # CORE TRANSFORMATION: Linear Regression Velocity Engine
   momentum_data <- reactive({
+    req(input$target_date, input$lookback_days)
     data <- master_data
     req(nrow(data) > 0)
     
-    baseline <- input$baseline_date
-    comparison <- input$comparison_date
+    # 1. PRE-FILTERING: Apply all data filters at the top
+    filtered_data <- data %>%
+      filter(date_pulled >= (input$target_date - input$lookback_days) & date_pulled <= input$target_date)
     
-    # 1. Calculate ranks dynamically for both selected dates based on row order
-    ranked_baseline <- data %>%
-      filter(date_pulled == baseline) %>%
-      mutate(baseline_rank = row_number()) %>%
-      select(title, author, genre, isbn, is_canadian, baseline_rank)
-    
-    ranked_comparison <- data %>%
-      filter(date_pulled == comparison) %>%
-      mutate(comparison_rank = row_number()) %>%
-      select(title, author, genre, isbn, is_canadian, comparison_rank)
-    
-    # 2. Join sets to trace individual journeys
-    joined <- ranked_comparison %>%
-      left_join(ranked_baseline, by = c("title", "author", "genre", "isbn", "is_canadian")) %>%
-      # Handle brand new entries gracefully
-      mutate(
-        baseline_rank = ifelse(is.na(baseline_rank), 999, baseline_rank),
-        # Delta: Positive means the rank improved (e.g., moved from rank 100 -> rank 20)
-        rank_delta = baseline_rank - comparison_rank,
-        is_new_entry = (baseline_rank == 999)
-      )
-    
-    # 3. Apply user-selected filters
     if (!is.null(input$genre_filter) && length(input$genre_filter) > 0) {
-      joined <- joined %>% filter(genre %in% input$genre_filter)
+      filtered_data <- filtered_data %>% filter(genre %in% input$genre_filter)
     }
     
     if (input$canadian_only) {
-      joined <- joined %>% filter(is_canadian == TRUE)
+      filtered_data <- filtered_data %>% filter(is_canadian == TRUE)
     }
     
     if (input$juvenile_only) {
-      joined <- joined %>% filter(str_detect(tolower(genre), "juvenile|children|ya|young adult"))
+      filtered_data <- filtered_data %>% 
+        filter(str_detect(tolower(genre), "juvenile|children|ya|young adult"))
     }
     
-    # SILENT INTERN DEBUGGER: Export state locally (and silently!) for live debugging
-    saveRDS(joined, "dev/dev_reactives/momentum_reactive.rds")
+    # 2. CALCULATE VELOCITY: Run the regression on the filtered set
+    # We use scraped_rank (pre-calculated globally) as the y-axis
+    # days_from_start as the x-axis
+    velocity_data <- filtered_data %>%
+      group_by(uid) %>%
+      mutate(days_from_start = as.numeric(date_pulled - min(date_pulled))) %>%
+      filter(n() >= 2) %>% # Need at least 2 days of data for a slope
+      summarise(
+        title = first(title),
+        author = first(author),
+        genre = first(genre),
+        is_canadian = first(is_canadian),
+        # Current rank is the rank on the target_date
+        current_rank = last(scraped_rank[date_pulled == input$target_date]),
+        # Multiply slope by -1 because lower rank number = better position
+        velocity = -lm(scraped_rank ~ days_from_start)$coefficients["days_from_start"],
+        .groups = "drop"
+      ) %>%
+      filter(!is.na(current_rank)) %>%
+      mutate(is_new_entry = FALSE) # New entries with only 1 day were filtered out by n() >= 2
     
-    joined
-  })
+    # 3. DEBUG EXPORT
+    if (exists("debug") && isTRUE(debug)) {
+      saveRDS(velocity_data, "dev/dev_reactives/momentum_reactive.rds")
+    }
+    
+    velocity_data
+  })  
   
   # RENDER INTERACTIVE RADAR PLOT (ggiraph)
   output$radar_plot <- renderGirafe({

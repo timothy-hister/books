@@ -1,19 +1,24 @@
 page_momentum_ui <- function(id, ...) {
   ns <- NS(id)
-  
-  # Unpack the arbitrary arguments passed into the ellipsis
   args <- list(...)
-  
-  # Pull our master_data reactive out of the argument bundle
   master_data <- args$master_data
+  if (is.null(master_data) || nrow(master_data) == 0) {
+    target_val <- Sys.Date()
+    max_slider <- 14
+    default_days <- 7
+  } else {
+    available_dates <- sort(unique(data$date_pulled))
+    target_val <- max(available_dates)
+    num_days <- length(available_dates)
+    default_days <- min(7, num_days - 1)
+    max_slider <- max(1, min(14, num_days - 1)) # Ensure max is at least 1
+  }
   
   layout_sidebar(
     sidebar = sidebar(
       title = "Filters",
-      
-      # Endogenous Dates (User-customizable baseline comparison periods!)
-      dateInput(ns("baseline_date"), "Baseline Date:", value = Sys.Date() - 3),
-      dateInput(ns("comparison_date"), "Comparison Date:", value = Sys.Date()),
+      dateInput(ns("target_date"), "Target Date:", value = target_val),
+      sliderInput(ns("lookback_days"), "Days to Look Back:", min = 1, max = max_slider, value = default_days, step = 1),
       
       hr(),
       
@@ -21,13 +26,13 @@ page_momentum_ui <- function(id, ...) {
       selectizeInput(
         ns("genre_filter"), 
         "Select Genres:", 
-        choices = NULL, 
+        choices = sort(unique(master_data$genre)), 
         multiple = TRUE,
         options = list(placeholder = "All Genres")
       ),
       
       # Filter flags
-      checkboxInput(ns("canadian_only"), "Canadian Authors Only", value = FALSE),
+      checkboxInput(ns("canadian_only"), "🍁 Canadian Authors Only", value = FALSE),
       checkboxInput(ns("juvenile_only"), "👶 Children / Juvenile Only", value = FALSE)
     ),
     

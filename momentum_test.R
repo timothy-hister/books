@@ -8,12 +8,26 @@ library(ggiraph)
 library(reactable)
 library(stringr)
 
+debug = T
+
 # Direct source
 source("pages/momentum_ui.R")
 source("pages/momentum_server.R")
 
 # Reactive Reader for our scraped master CSV
-master_data <- read_csv("data/book_data_master.csv", show_col_types = FALSE)
+master_data <- read_csv("data/book_data_master.csv", show_col_types = FALSE) |>
+  group_by(date_pulled) %>%
+  mutate(scraped_rank = row_number()) %>%
+  ungroup() %>%
+  mutate(
+    safe_isbn = ifelse(is.na(isbn), "noisbn", isbn),
+    uid = paste(safe_isbn, title, author, sep = "_") %>% 
+      str_to_lower() %>% 
+      str_replace_all("[^a-z0-9]", "_") %>%
+      str_trunc(80, ellipsis = "")
+  ) %>%
+  select(-safe_isbn)
+
 
 ui <- page_fluid(
   theme = bs_theme(version = 5, bootswatch = "minty"),
