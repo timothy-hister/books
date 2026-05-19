@@ -1,5 +1,11 @@
-page_momentum_ui <- function(id) {
+page_momentum_ui <- function(id, ...) {
   ns <- NS(id)
+  
+  # Unpack the arbitrary arguments passed into the ellipsis
+  args <- list(...)
+  
+  # Pull our master_data reactive out of the argument bundle
+  master_data <- args$master_data
   
   layout_sidebar(
     sidebar = sidebar(

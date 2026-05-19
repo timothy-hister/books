@@ -1,15 +1,15 @@
-page_momentum_server <- function(input, output, session) {
+page_momentum_server <- function(input, output, session, ...) {
   ns <- session$ns
   
-  # Reactive Reader for our scraped master CSV
-  master_data <- reactive({
-    req(file.exists("data/book_data_master.csv"))
-    read_csv("data/book_data_master.csv", show_col_types = FALSE)
-  })
+  # Unpack the arbitrary arguments passed into the ellipsis
+  args <- list(...)
+  
+  # Pull our master_data reactive out of the argument bundle
+  master_data <- args$master_data
   
   # Dynamically populate genres dropdown on setup
   observe({
-    data <- master_data()
+    data <- master_data
     req(nrow(data) > 0)
     
     unique_genres <- data %>% 
@@ -28,7 +28,7 @@ page_momentum_server <- function(input, output, session) {
   
   # CORE TRANSFORMATION: Align baseline vs comparison, calculate deltas on the fly
   momentum_data <- reactive({
-    data <- master_data()
+    data <- master_data
     req(nrow(data) > 0)
     
     baseline <- input$baseline_date

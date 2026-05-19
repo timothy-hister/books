@@ -6,11 +6,17 @@ library(readr)
 # Source global configurations and load libraries
 source("global.R")
 
+# Source page modules
+if (file.exists("pages/momentum_ui.R")) source("pages/momentum_ui.R")
+if (file.exists("pages/momentum_server.R")) source("pages/momentum_server.R")
+
 # Check if the app is currently running on shinyapps.io
 is_deployed <- nzchar(Sys.getenv("SHINYAPPS_APP_NAME"))
 
-# Set a secure app password
-APP_PASSWORD <- "followingfromahead2026"
+APP_PASSWORD <- Sys.getenv("APP_PASSWORD")
+DATA_PATH <- Sys.getenv("DATA_PATH")
+
+master_data = read_csv(DATA_PATH)
 
 # 1. MAIN UI
 main_ui <- page_navbar(
@@ -90,7 +96,7 @@ server <- function(input, output, session) {
   })
   
   # Call Page Modules
-  callModule(page_momentum_server, "momentum_page")
+  callModule(page_momentum_server, "momentum_page", master_data = master_data)
 }
 
 shinyApp(ui, server)
