@@ -208,7 +208,8 @@ page_momentum_server <- function(input, output, session, ...) {
       options = list(
         opts_hover(css = "fill:#2ecc71;stroke:#27ae60;cursor:pointer;"),
         opts_selection(type = "single"),
-        opts_toolbar(saveaspng = FALSE)
+        opts_toolbar(saveaspng = FALSE),
+        opts_sizing(rescale = TRUE, width = 1)
       )
     )
   })  

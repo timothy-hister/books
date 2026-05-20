@@ -1,9 +1,10 @@
+if (file.exists(".Renviron")) readRenviron(".Renviron")
+
 library(shiny)
 library(bslib)
 library(dplyr)
 library(readr)
-
-debug = F
+library(shinymanager)
 
 # Source global configurations and load libraries
 source("global.R")
@@ -20,9 +21,22 @@ DATA_PATH <- Sys.getenv("DATA_PATH")
 
 master_data = read_csv(DATA_PATH, show_col_types = FALSE)
 
-# 1. MAIN UI
+# ==============================================================================
+# 1. SHINYMANAGER CREDENTIALS
+# ==============================================================================
+# Define the single-user credentials dataframe using the token from your .Renviron
+credentials <- data.frame(
+  user = "admin",                    # The username required on the web interface
+  password = APP_PASSWORD,           # Securely pulled from your environment file
+  stringsAsFactors = FALSE
+)
+
+# ==============================================================================
+# 2. MAIN DASHBOARD UI
+# ==============================================================================
 main_ui <- page_navbar(
-  title = "Canadian Book Momentum",
+  fillable = "Momentum Radar",
+  title = "Book Momentum",
   theme = bs_theme(
     version = 5,
     bootswatch = "minty" # A soft, elegant bookish color scheme
@@ -31,6 +45,7 @@ main_ui <- page_navbar(
   # Page 1 Module
   nav_panel(
     title = "Momentum Radar",
+    value = "Momentum Radar",
     page_momentum_ui("momentum_page")
   ),
   
@@ -44,58 +59,14 @@ main_ui <- page_navbar(
   )
 )
 
-# 2. LOGIN UI
-login_ui <- page_fluid(
-  theme = bs_theme(version = 5, bootswatch = "minty"),
-  div(
-    style = "max-width: 400px; margin: 100px auto; padding: 20px;",
-    card(
-      card_header(class = "bg-primary text-white text-center", "Secure Access"),
-      card_body(
-        passwordInput("password_entry", "Enter Access Key:", placeholder = "Password"),
-        actionButton("login_btn", "Log In", class = "btn-primary w-100"),
-        uiOutput("login_error")
-      )
-    )
-  )
-)
+ui <- secure_app(main_ui)
 
-# 3. ROUTED UI
-ui <- function(request) {
-  if (is_deployed) {
-    # Force authentication on the cloud
-    uiOutput("auth_router")
-  } else {
-    # Render main dashboard directly if running locally
-    main_ui
-  }
-}
-
-# 4. SERVER
 server <- function(input, output, session) {
   
-  # Session-level authentication state
-  authenticated <- reactiveVal(FALSE)
-  
-  # Auth screen routing
-  output$auth_router <- renderUI({
-    if (authenticated()) {
-      main_ui
-    } else {
-      login_ui
-    }
-  })
-  
-  # Handle login action
-  observeEvent(input$login_btn, {
-    if (input$password_entry == APP_PASSWORD) {
-      authenticated(TRUE)
-    } else {
-      output$login_error <- renderUI({
-        div(class = "text-danger mt-2 text-center", "Incorrect Password. Please try again.")
-      })
-    }
-  })
+  # Secure the server side using the environment-injected credentials
+  res_auth <- secure_server(
+    check_credentials = check_credentials(credentials)
+  )
   
   # Call Page Modules
   callModule(page_momentum_server, "momentum_page", master_data = master_data)

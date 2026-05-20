@@ -2,6 +2,8 @@ page_momentum_ui <- function(id) {
   ns <- NS(id)
   
   layout_sidebar(
+    fillable = F,
+    fill = F,
     sidebar = sidebar(
       title = "Filters",
       
@@ -46,34 +48,29 @@ page_momentum_ui <- function(id) {
       )
     ),
     
-    layout_column_wrap(
-      width = 1,
-      
-      # Interactive ggiraph plotting canvas
-      card(
-        full_screen = TRUE,
-        card_header("The Momentum Radar"),
-        card_body(
-          # Wrap the output in a spinner. Type 6 is a clean, modern minimal ring.
-          shinycssloaders::withSpinner(
-            girafeOutput(ns("radar_plot"), width = "100%", height = "400px"),
-            color = "#2ecc71", # Matches your green hover color for a branded feel
-            type = 6
-          )
+    # Interactive ggiraph plotting canvas
+    card(
+      full_screen = TRUE, 
+      card_header("The Momentum Radar"),
+      card_body(
+        fillable = F,
+        shinycssloaders::withSpinner(
+          girafeOutput(ns("radar_plot"), width = "100%", height = "350px"), # Locked height for visual breathing room
+          color = "#2ecc71",
+          type = 6
         )
-      ),
-      
-      # Elegant reactable scouting ledger
-      card(
-        full_screen = TRUE,
-        card_header("Scouting Ledger"),
-        card_body(
-          # Adding a spinner here ensures they know the ledger is rebuilding too
-          shinycssloaders::withSpinner(
-            reactableOutput(ns("ledger_table")),
-            color = "#2ecc71",
-            type = 6
-          )
+      )
+    ),
+    
+    # Elegant reactable scouting ledger
+    card(
+      full_screen = TRUE,
+      card_header("Scouting Ledger"),
+      card_body(
+        shinycssloaders::withSpinner(
+          reactableOutput(ns("ledger_table")),
+          color = "#2ecc71",
+          type = 6
         )
       )
     )
