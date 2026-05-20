@@ -1,59 +1,65 @@
-page_momentum_ui <- function(id, ...) {
+page_momentum_ui <- function(id) {
   ns <- NS(id)
-  args <- list(...)
-  master_data <- args$master_data
-  if (is.null(master_data) || nrow(master_data) == 0) {
-    target_val <- Sys.Date()
-    max_slider <- 14
-    default_days <- 7
-  } else {
-    available_dates <- sort(unique(data$date_pulled))
-    target_val <- max(available_dates)
-    num_days <- length(available_dates)
-    default_days <- min(7, num_days - 1)
-    max_slider <- max(1, min(14, num_days - 1)) # Ensure max is at least 1
-  }
   
   layout_sidebar(
     sidebar = sidebar(
       title = "Filters",
-      dateInput(ns("target_date"), "Target Date:", value = target_val),
-      sliderInput(ns("lookback_days"), "Days to Look Back:", min = 1, max = max_slider, value = default_days, step = 1),
+      
+      selectInput(
+        ns("target_date"), 
+        label = with_help("Target Date:", "The main snapshot date you want to analyze. Only dates with active, verified data scrapes are available."), 
+        choices = NULL # Fully populated by the server on boot
+      ),
+      
+      sliderInput(
+        ns("lookback_days"), 
+        label = with_help("Days to Look Back:", "The historical window to calculate data trends. A longer window yields smoother trends."), 
+        min = 1, max = 14, value = 7, step = 1 # Static safe limits; server caps this dynamically based on data availability
+      ),
+      
       sliderInput(
         ns("rank_bracket"), 
-        "Rank Bracket:", 
-        min = 1, 
-        max = 200,      # Or max(available_ranks) dynamically
-        value = c(50, 200), 
-        step = 5
+        label = with_help("Rank Bracket:", "Filters books based on their final position. Default (50-200) focuses on the 'mid-list' sweet spot, hiding obvious mega-bestsellers and long-tail noise."), 
+        min = 1, max = 200, value = c(50, 200), step = 5 # Standard mid-list baseline bracket
       ),
       
       hr(),
       
-      # Dynamic select dropdown populated on server initialization
       selectizeInput(
         ns("genre_filter"), 
-        "Select Genres:", 
-        choices = sort(unique(master_data$genre)), 
+        label = with_help("Select Genres:", "Narrow down the view to specific retail categories. Leave empty to evaluate all genres simultaneously."), 
+        choices = NULL, # Completely decoupled from master_data; server handles item list initialization
         multiple = TRUE,
         options = list(placeholder = "All Genres")
       ),
       
-      # Filter flags
-      checkboxInput(ns("canadian_only"), "🍁 Canadian Authors Only", value = FALSE),
-      checkboxInput(ns("juvenile_only"), "👶 Children / Juvenile Only", value = FALSE)
+      checkboxInput(
+        ns("canadian_only"), 
+        label = with_help("🍁 Canadian Authors Only", "Self-explanatory"), 
+        value = FALSE
+      ),
+      
+      checkboxInput(
+        ns("juvenile_only"), 
+        label = with_help("👶 Children / Juvenile Only", "Currently uses targeted text matching to isolate children's, juvenile, and Young Adult (YA) titles; we can improve this."), 
+        value = FALSE
+      )
     ),
     
-    # Adaptive layout wraps
     layout_column_wrap(
       width = 1,
       
       # Interactive ggiraph plotting canvas
       card(
-        full_screen = TRUE, # bslib full-screen utility
+        full_screen = TRUE,
         card_header("The Momentum Radar"),
         card_body(
-          girafeOutput(ns("radar_plot"), width = "100%", height = "400px")
+          # Wrap the output in a spinner. Type 6 is a clean, modern minimal ring.
+          shinycssloaders::withSpinner(
+            girafeOutput(ns("radar_plot"), width = "100%", height = "400px"),
+            color = "#2ecc71", # Matches your green hover color for a branded feel
+            type = 6
+          )
         )
       ),
       
@@ -62,7 +68,12 @@ page_momentum_ui <- function(id, ...) {
         full_screen = TRUE,
         card_header("Scouting Ledger"),
         card_body(
-          reactableOutput(ns("ledger_table"))
+          # Adding a spinner here ensures they know the ledger is rebuilding too
+          shinycssloaders::withSpinner(
+            reactableOutput(ns("ledger_table")),
+            color = "#2ecc71",
+            type = 6
+          )
         )
       )
     )

@@ -13,6 +13,7 @@ debug = T
 # Direct source
 source("pages/momentum_ui.R")
 source("pages/momentum_server.R")
+source("global.R")
 
 # Reactive Reader for our scraped master CSV
 master_data <- read_csv("data/book_data_master.csv", show_col_types = FALSE)
